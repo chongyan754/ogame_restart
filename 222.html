@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OGame Legacy - 技术展示 (银河系可视化)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 核心样式：冷酷的黑客风格 */
+        body {
+            background-color: #05070a; /* 极深的背景色 */
+            color: #c1d1e6; /* 冰蓝色文字 */
+            font-family: 'Courier New', Courier, monospace; /* 模拟老式终端 */
+            overflow: hidden; /* 防止滚动，保持全屏 */
+        }
+
+        /* 霓虹灯效果 */
+        .neon-border {
+            border: 1px solid #1e3a8a;
+            box-shadow: 0 0 10px rgba(30, 58, 138, 0.5);
+        }
+
+        .neon-text {
+            color: #3b82f6;
+            text-shadow: 0 0 5px #3b82f6;
+        }
+
+        /* 可点击元素的悬停效果 */
+        .interactive:hover {
+            background-color: rgba(59, 130, 246, 0.1);
+            cursor: pointer;
+            border-color: #3b82f6;
+        }
+
+        /* 旋转动画（用于恒星和行星） */
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .rotate { animation: rotate 20s linear infinite; }
+        .rotate-fast { animation: rotate 5s linear infinite; }
+
+        /* 点击反馈动画 */
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 0; }
+        }
+        .click-pulse {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.8);
+            animation: pulse 0.4s ease-out;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col">
+
+    <header class="h-12 border-b border-slate-800 flex items-center justify-between px-6 bg-slate-900/50">
+        <div class="flex items-center gap-2">
+            <span class="neon-text text-lg font-bold">OGAME::LEGACY</span>
+            <span class="text-xs text-slate-500">[技术展示版 v0.1]</span>
+        </div>
+        <div class="text-sm text-slate-400">随机数据，刷新变动</div>
+    </header>
+
+    <main class="flex-1 flex gap-2 p-2 overflow-hidden">
+        
+        <div id="visual-viewport" class="relative w-4/5 h-full neon-border rounded bg-slate-950 overflow-hidden">
+            <div id="visual-container" class="absolute inset-0 transition-transform duration-500 ease-in-out">
+                </div>
+            <button id="back-btn" class="absolute top-4 left-4 hidden bg-slate-800 text-xs px-3 py-1 rounded border border-slate-700 hover:bg-slate-700">
+                < 返回银河系
+            </button>
+        </div>
+
+        <aside id="info-panel" class="w-1/5 h-full neon-border rounded bg-slate-900 flex flex-col">
+            <div class="p-4 border-b border-slate-800 bg-slate-950">
+                <h2 id="info-title" class="text-xl neon-text">探测器就绪</h2>
+                <p id="info-coords" class="text-xs text-slate-500">点击左侧星体获取数据</p>
+            </div>
+            <div id="info-content" class="flex-1 p-4 space-y-4 text-sm overflow-y-auto">
+                <p class="text-slate-600 italic">等待初始化...</p>
+                </div>
+        </aside>
+
+    </main>
+
+    <script>
+        // ==========================================
+        // 技术展示：数据随机生成与可视化引擎
+        // ==========================================
+
+        const COUNT_SYSTEMS = 200; // 银河系200个星系
+
+        // 状态管理
+        let currentView = 'galaxy'; // galaxy 或 system
+        let galaxyData = [];
+        let selectedSystemId = null;
+
+        // 获取 DOM 元素
+        const container = document.getElementById('visual-container');
+        const backBtn = document.getElementById('back-btn');
+        const infoTitle = document.getElementById('info-title');
+        const infoCoords = document.getElementById('info-coords');
+        const infoContent = document.getElementById('info-content');
+
+        // 初始化
+        function init() {
+            generateGalaxyData();
+            renderGalaxyView();
+            backBtn.addEventListener('click', renderGalaxyView);
+        }
+
+        // ==========================================
+        // 数据生成逻辑
+        // ==========================================
+        
+        // 随机数辅助函数
+        const random = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+        const randomFloat = (min, max) => Math.random() * (max - min) + min;
+
+        // 生成星系和行星数据
+        function generateGalaxyData() {
+            galaxyData = [];
+            for (let i = 0; i < COUNT_SYSTEMS; i++) {
+                const system = {
+                    id: `sys_${i}`,
+                    name: `Sys-${random(100, 999)}`,
+                    coords: `${random(1, 400)}:${random(1, 400)}`, // 坐标范围
+                    planets: [],
+                    // 在可视化区域内的随机位置 (1%-99% 避免靠边)
+                    x: randomFloat(1, 99), 
+                    y: randomFloat(1, 99),
+                    size: randomFloat(0.5, 1.5) // 星系视觉大小
+                };
+
+                // 每个星系随机 1-10 颗行星
+                const numPlanets = random(1, 10);
+                for (let j = 0; j < numPlanets; j++) {
+                    system.planets.push({
+                        id: `p_${i}_${j}`,
+                        name: `${system.name} P-${j + 1}`,
+                        position: j + 1, // 1-10 位置
+                        type: ['Volcanic', 'M-Class', 'Gas Giant', 'Ice', 'Asteroid'][random(0, 4)],
+                        diameter: random(5000, 15000), // 直径 km
+                        temp: random(-100, 200), // 温度
+                        resources: {
+                            metal: random(1000, 100000),
+                            crystal: random(500, 50000)
+                        }
+                    });
+                }
+                galaxyData.push(system);
+            }
+        }
+
+        // ==========================================
+        // 渲染引擎
+        // ==========================================
+
+        // 清除视图
+        function clearContainer() {
+            container.innerHTML = '';
+        }
+
+        // 点击反馈动画
+        function showClickFeedback(e) {
+            const pulse = document.createElement('div');
+            pulse.classList.add('click-pulse');
+            pulse.style.width = '20px';
+            pulse.style.height = '20px';
+            pulse.style.left = `${e.clientX - 10}px`;
+            pulse.style.top = `${e.clientY - 10}px`;
+            document.body.appendChild(pulse);
+            setTimeout(() => pulse.remove(), 400); // 400ms 后移除
+        }
+
+        // --- 视图 1: 银河系 ---
+        function renderGalaxyView() {
+            currentView = 'galaxy';
+            clearContainer();
+            backBtn.classList.add('hidden'); // 隐藏返回
+            container.style.transform = 'scale(1)'; // 重置缩放
+
+            // 重置右侧信息面板
+            infoTitle.innerText = "银河系概览";
+            infoCoords.innerText = `当前区域: [${COUNT_SYSTEMS} 系统]`;
+            infoContent.innerHTML = `<p class="text-slate-500 italic">点击任意绿色光点以进入恒星系。</p>`;
+
+            // 渲染所有系统
+            galaxyData.forEach(sys => {
+                const sysEl = document.createElement('div');
+                sysEl.className = 'absolute interactive rounded-full rotate';
+                
+                // 基础样式
+                sysEl.style.width = `${sys.size * 6}px`;
+                sysEl.style.height = `${sys.size * 6}px`;
+                sysEl.style.left = `${sys.x}%`;
+                sysEl.style.top = `${sys.y}%`;
+                
+                // 视觉效果：荧光绿点
+                sysEl.style.backgroundColor = '#10b981'; 
+                sysEl.style.boxShadow = '0 0 8px #10b981, 0 0 15px rgba(16, 185, 129, 0.5)';
+                sysEl.style.border = '1px solid #ffffff';
+
+                // 悬停显示名称
+                sysEl.title = `${sys.name} [${sys.coords}]`;
+
+                // 点击事件
+                sysEl.addEventListener('click', (e) => {
+                    showClickFeedback(e);
+                    selectedSystemId = sys.id;
+                    
+                    // 演示视图切换动画 (点击处放大)
+                    container.style.transformOrigin = `${sys.x}% ${sys.y}%`;
+                    container.style.transform = 'scale(5)';
+                    
+                    // 延迟 300ms 切换视图，配合动画
+                    setTimeout(renderSystemView, 300);
+                });
+
+                container.appendChild(sysEl);
+            });
+        }
+
+        // --- 视图 2: 单个恒星系 ---
+        function renderSystemView() {
+            if (!selectedSystemId) return;
+            currentView = 'system';
+            clearContainer();
+            container.style.transform = 'scale(1)'; // 重置缩放
+            backBtn.classList.remove('hidden'); // 显示返回
+
+            const system = galaxyData.find(s => s.id === selectedSystemId);
+
+            // 更新右侧面板（系统概况）
+            infoTitle.innerText = system.name;
+            infoCoords.innerText = `坐标: [${system.coords}]`;
+            infoContent.innerHTML = `<p class="text-slate-400">探测到 ${system.planets.length} 颗行星在轨。</p>`;
+
+            // 1. 渲染中心恒星 (恒星是死的，不需要交互)
+            const sun = document.createElement('div');
+            sun.className = 'absolute rotate';
+            sun.style.width = '120px';
+            sun.style.height = '120px';
+            sun.style.left = '50%';
+            sun.style.top = '50%';
+            sun.style.transform = 'translate(-50%, -50%)'; // 居中
+            sun.style.borderRadius = '50%';
+            sun.style.backgroundColor = '#f59e0b'; // 黄色太阳
+            sun.style.boxShadow = '0 0 50px #f59e0b, 0 0 100px rgba(245, 158, 11, 0.4)';
+            container.appendChild(sun);
+
+            // 2. 渲染轨道和行星
+            system.planets.forEach((planet, index) => {
+                const radius = 100 + (index * 40); // 轨道半径递增
+
+                // 轨道线
+                const orbit = document.createElement('div');
+                orbit.className = 'absolute border border-slate-800 rounded-full';
+                orbit.style.width = `${radius * 2}px`;
+                orbit.style.height = `${radius * 2}px`;
+                orbit.style.left = '50%';
+                orbit.style.top = '50%';
+                orbit.style.transform = 'translate(-50%, -50%)';
+                orbit.style.pointerEvents = 'none'; // 轨道不能点击
+                container.appendChild(orbit);
+
+                // 行星 (放在一个旋转的容器里，实现轨道公转)
+                const planetContainer = document.createElement('div');
+                planetContainer.className = 'absolute rotate';
+                planetContainer.style.width = `${radius * 2}px`;
+                planetContainer.style.height = `${radius * 2}px`;
+                planetContainer.style.left = '50%';
+                planetContainer.style.top = '50%';
+                planetContainer.style.transform = 'translate(-50%, -50%)';
+                // 随机公转速度
+                planetContainer.style.animationDuration = `${random(10, 60)}s`; 
+                container.appendChild(planetContainer);
+
+                // 行星主体
+                const planetEl = document.createElement('div');
+                planetEl.className = 'absolute interactive rotate-fast';
+                // 基础视觉大小根据直径拟合
+                const visualSize = planet.diameter / 1000 + 10;
+                planetEl.style.width = `${visualSize}px`;
+                planetEl.style.height = `${visualSize}px`;
+                // 放在轨道的最右侧
+                planetEl.style.right = `${-visualSize/2}px`; 
+                planetEl.style.top = '50%';
+                planetEl.style.marginTop = `${-visualSize/2}px`;
+                planetEl.style.borderRadius = '50%';
+
+                // 根据类型设置不同颜色
+                switch(planet.type) {
+                    case 'Volcanic': planetEl.style.backgroundColor = '#ef4444'; break; // 红
+                    case 'M-Class': planetEl.style.backgroundColor = '#22c55e'; break; // 绿
+                    case 'Gas Giant': planetEl.style.backgroundColor = '#a855f7'; break; // 紫
+                    case 'Ice': planetEl.style.backgroundColor = '#3b82f6'; break; // 蓝
+                    default: planetEl.style.backgroundColor = '#94a3b8'; // 灰
+                }
+                planetEl.style.boxShadow = 'inset -4px -4px 6px rgba(0,0,0,0.6)';
+
+                // 点击行星
+                planetEl.addEventListener('click', (e) => {
+                    // 阻止点击行星触发轨道容器的点击（如果有）
+                    e.stopPropagation(); 
+                    showClickFeedback(e);
+                    updatePlanetInfo(planet);
+                });
+
+                planetContainer.appendChild(planetEl);
+            });
+        }
+
+        // --- 子视图: 行星详细信息 (右侧面板更新) ---
+        function updatePlanetInfo(planet) {
+            infoTitle.innerText = planet.name;
+            // 荧光蓝
+            infoTitle.classList.add('neon-text'); 
+            infoCoords.innerText = `位置: 第 ${planet.position} 轨道`;
+
+            // 动态生成详细信息内容
+            let content = `
+                <div class="space-y-2 border border-slate-700 p-2 bg-slate-950 rounded">
+                    <p><strong class="text-slate-300">类型:</strong> ${planet.type}</p>
+                    <p><strong class="text-slate-300">直径:</strong> ${planet.diameter.toLocaleString()} km</p>
+                    <p><strong class="text-slate-300">平均温度:</strong> ${planet.temp} °C</p>
+                </div>
+                <div class="space-y-1">
+                    <p class="text-xs text-slate-500 uppercase tracking-wider">资源探测：</p>
+                    <p><strong class="text-green-400">金属:</strong> ${planet.resources.metal.toLocaleString()}</p>
+                    <p><strong class="text-cyan-400">晶体:</strong> ${planet.resources.crystal.toLocaleString()}</p>
+                </div>
+                <div class="pt-4 border-t border-slate-800">
+                    <button class="w-full bg-blue-900/50 text-blue-300 border border-blue-700 text-xs py-1 rounded hover:bg-blue-800">
+                        发送探测器
+                    </button>
+                </div>
+            `;
+            infoContent.innerHTML = content;
+        }
+
+        // 启动
+        init();
+
+    </script>
+</body>
+</html>

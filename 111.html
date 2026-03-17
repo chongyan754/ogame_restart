@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OGame · 技术展示</title>
+    <!-- Font Awesome 6 (免费图标库, 增加OGame的科技感) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background-color: #0a0e17;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* 游戏主界面容器 —— 经典OGame暗色背景，带磨砂边框 */
+        .game-container {
+            max-width: 1400px;
+            width: 100%;
+            background-color: #0f172a;      /* 深邃星空底色 */
+            border-radius: 28px;
+            border: 1px solid #2a3a55;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8), 0 0 0 1px #1e2b3f inset;
+            padding: 22px 24px;
+        }
+
+        /* ---------- 顶部标识行 ---------- */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            padding: 0 8px;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #b7c9e2;
+            font-weight: 500;
+            letter-spacing: 1px;
+        }
+        .logo i {
+            font-size: 28px;
+            color: #fbbf24;                 /* 金黄色点缀 */
+            filter: drop-shadow(0 0 5px #f59e0b80);
+        }
+        .logo span {
+            font-size: 22px;
+            background: linear-gradient(135deg, #c0d4f5, #90a9c9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 600;
+        }
+        .player-badge {
+            background: #1e2a3a;
+            border-radius: 40px;
+            padding: 8px 20px;
+            border: 1px solid #3e556f;
+            box-shadow: inset 0 1px 2px #2f4055;
+            color: #cbd5e1;
+            font-size: 0.95rem;
+        }
+        .player-badge i {
+            color: #fbbf24;
+            margin-right: 6px;
+        }
+        .player-badge strong {
+            color: #e6e9f0;
+            margin: 0 4px;
+        }
+
+        /* ---------- 资源条 (金属,晶体,重氢,能量) ---------- */
+        .resources-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+        .resource-card {
+            background: #1c2536;
+            border-radius: 20px;
+            padding: 16px 18px;
+            border: 1px solid #31445e;
+            box-shadow: 0 5px 0 #0b101a;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transition: all 0.1s ease;
+        }
+        .resource-card:hover {
+            border-color: #5d7aa3;
+            background: #1f2a3d;
+        }
+        .resource-icon {
+            font-size: 32px;
+            width: 48px;
+            text-align: center;
+        }
+        .metal { color: #a8b9d5; }      /* 金属灰 */
+        .crystal { color: #6dd5ed; }    /* 晶体蓝 */
+        .deuterium { color: #cf9aff; }   /* 重氢紫 */
+        .energy { color: #fbbf24; }       /* 能量金 */
+        .resource-info {
+            flex: 1;
+        }
+        .resource-label {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #8fa3c2;
+            margin-bottom: 4px;
+        }
+        .resource-value {
+            font-size: 1.7rem;
+            font-weight: 600;
+            color: #f0f3fa;
+            line-height: 1.2;
+        }
+        .resource-detail {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #95acc9;
+            margin-top: 6px;
+        }
+        .resource-detail span:last-child {
+            color: #4caf92;
+        }
+        /* 简易进度条 (模仿储存容量) */
+        .storage-bar {
+            margin-top: 8px;
+            height: 5px;
+            background: #101826;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+        .storage-fill {
+            height: 100%;
+            width: 75%; /* 模拟金属存量75% */
+            background: linear-gradient(90deg, #7e9bc0, #bacef0);
+            border-radius: 20px;
+        }
+        .fill-crystal { width: 62%; background: linear-gradient(90deg, #4790aa, #7ec9e0); }
+        .fill-deut { width: 43%; background: linear-gradient(90deg, #a070cf, #caa9ff); }
+        .fill-energy { width: 88%; background: linear-gradient(90deg, #eab308, #fde047); }
+
+        /* ---------- 主体: 左侧行星列表 + 右侧建筑区 ---------- */
+        .main-panel {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        /* ----- 左侧行星列表 (OGame 经典纵向星球卡片) ----- */
+        .planets-sidebar {
+            flex: 0 0 260px;
+            background: #131d2b;
+            border-radius: 24px;
+            border: 1px solid #293a4f;
+            padding: 18px 12px;
+            box-shadow: inset 0 2px 5px #020408;
+        }
+        .sidebar-title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #ccddec;
+            font-size: 1rem;
+            padding: 0 8px 12px 8px;
+            border-bottom: 1px dashed #314e6b;
+            margin-bottom: 12px;
+        }
+        .sidebar-title i {
+            color: #fbbf24;
+        }
+        .planet-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .planet-item {
+            background: #1b2638;
+            border-radius: 18px;
+            padding: 14px 12px;
+            border: 1px solid #2d405b;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: 0.1s;
+            cursor: default;
+            box-shadow: 0 3px 0 #0f1622;
+        }
+        .planet-item.active {
+            border-color: #fbbf24;
+            background: #23304b;
+            box-shadow: 0 0 10px #fbbf2440, 0 3px 0 #0f1622;
+        }
+        .planet-icon {
+            font-size: 32px;
+            color: #b1c9f0;
+        }
+        .planet-info h4 {
+            color: #eaedf5;
+            font-size: 1.1rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .planet-info h4 i {
+            font-size: 0.7rem;
+            color: #4ade80;
+        }
+        .planet-coords {
+            font-size: 0.8rem;
+            color: #94a9c7;
+            font-family: 'Courier New', monospace;
+            margin-top: 4px;
+        }
+        .planet-temp {
+            font-size: 0.7rem;
+            color: #6082b0;
+        }
+
+        /* 月球标记 (增加细节) */
+        .moon-tag {
+            background: #334155;
+            border-radius: 12px;
+            padding: 2px 8px;
+            font-size: 0.65rem;
+            color: #b9d3ff;
+            margin-left: 6px;
+        }
+
+        /* ----- 右侧主要内容 (建筑网格 + 队列) ----- */
+        .content-area {
+            flex: 1;
+            min-width: 300px;
+        }
+        /* 当前行星标题 + 建造队列模拟 */
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            background: #131d2b;
+            padding: 16px 22px;
+            border-radius: 30px;
+            border: 1px solid #253a50;
+        }
+        .planet-name {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .planet-name i {
+            font-size: 28px;
+            color: #fbbf24;
+        }
+        .planet-name h2 {
+            color: #eef3fc;
+            font-weight: 500;
+            font-size: 1.7rem;
+        }
+        .build-queue {
+            background: #1b293b;
+            border-radius: 40px;
+            padding: 8px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            border: 1px solid #3a5372;
+        }
+        .queue-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #c9dbf5;
+        }
+        .queue-item i {
+            color: #fbbf24;
+            font-size: 1rem;
+        }
+        .progress-slim {
+            width: 100px;
+            height: 6px;
+            background: #16212f;
+            border-radius: 10px;
+        }
+        .progress-slim .bar {
+            height: 100%;
+            width: 65%;
+            background: linear-gradient(90deg, #fbbf24, #fcd34d);
+            border-radius: 10px;
+        }
+
+        /* 建筑卡片网格 (OGame 标准) */
+        .buildings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 18px;
+            margin-top: 8px;
+        }
+        .building-card {
+            background: #17212f;
+            border-radius: 22px;
+            border: 1px solid #2b3d58;
+            padding: 18px 16px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 6px 0 #0e141f;
+            transition: transform 0.1s, border-color 0.1s;
+        }
+        .building-card:hover {
+            border-color: #5b7fb1;
+            transform: translateY(-2px);
+        }
+        .building-icon {
+            font-size: 36px;
+            margin-bottom: 10px;
+            color: #b7cfed;
+        }
+        .building-name {
+            display: flex;
+            justify-content: space-between;
+            color: #d9e6ff;
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 14px;
+        }
+        .building-level {
+            background: #1d3249;
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            color: #b9d6f0;
+            border: 1px solid #385882;
+        }
+        .building-stats {
+            font-size: 0.8rem;
+            color: #8ba3c2;
+            margin: 12px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .building-stats div {
+            display: flex;
+            justify-content: space-between;
+        }
+        .upgrade-btn {
+            background: #263d5a;
+            border: none;
+            border-radius: 40px;
+            padding: 12px 0;
+            color: #e2ecff;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-align: center;
+            border-bottom: 3px solid #132235;
+            cursor: default;        /* 静态演示，无功能 */
+            transition: 0.1s;
+            margin-top: 6px;
+        }
+        .upgrade-btn:hover {
+            background: #2f4b70;
+            border-bottom-color: #1f3147;
+        }
+
+        /* 底部快捷命令 (OGame 经典功能条) */
+        .command-bar {
+            margin-top: 32px;
+            background: #101826;
+            border-radius: 50px;
+            padding: 14px 24px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px 28px;
+            border: 1px solid #2a3f5a;
+            justify-content: center;
+        }
+        .cmd-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #b0c7e7;
+            font-size: 1rem;
+            font-weight: 500;
+            padding: 4px 10px;
+            border-radius: 30px;
+            transition: 0.1s;
+            cursor: default;
+        }
+        .cmd-item i {
+            color: #fbbf24;
+            font-size: 1.2rem;
+        }
+        .cmd-item:hover {
+            background: #1f2f44;
+            color: #dbeafe;
+        }
+
+        /* 脚注提示 (技术展示标识) */
+        .tech-footer {
+            text-align: right;
+            margin-top: 18px;
+            color: #3f556e;
+            font-size: 0.8rem;
+            border-top: 1px dashed #263549;
+            padding-top: 12px;
+        }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <!-- 顶栏：logo + 玩家信息 -->
+    <div class="top-bar">
+        <div class="logo">
+            <i class="fas fa-planet-ringed"></i>
+            <span>OGAME · 技术展示</span>
+        </div>
+        <div class="player-badge">
+            <i class="fas fa-user-astronaut"></i> 指挥官 <strong>TestPlayer</strong>  [ 排名: <strong>#1</strong> ]
+        </div>
+    </div>
+
+    <!-- 资源条 (金属/晶体/重氢/能量) 带简易储量条 -->
+    <div class="resources-row">
+        <!-- 金属 -->
+        <div class="resource-card">
+            <div class="resource-icon metal"><i class="fas fa-hammer"></i></div>
+            <div class="resource-info">
+                <div class="resource-label">金属</div>
+                <div class="resource-value">1.25M</div>
+                <div class="resource-detail"><span>+7.2k/时</span><span>2.00M</span></div>
+                <div class="storage-bar"><div class="storage-fill"></div></div>
+            </div>
+        </div>
+        <!-- 晶体 -->
+        <div class="resource-card">
+            <div class="resource-icon crystal"><i class="fas fa-gem"></i></div>
+            <div class="resource-info">
+                <div class="resource-label">晶体</div>
+                <div class="resource-value">892K</div>
+                <div class="resource-detail"><span>+4.1k/时</span><span>1.50M</span></div>
+                <div class="storage-bar"><div class="storage-fill fill-crystal"></div></div>
+            </div>
+        </div>
+        <!-- 重氢 -->
+        <div class="resource-card">
+            <div class="resource-icon deuterium"><i class="fas fa-atom"></i></div>
+            <div class="resource-info">
+                <div class="resource-label">重氢</div>
+                <div class="resource-value">340K</div>
+                <div class="resource-detail"><span>+1.2k/时</span><span>800K</span></div>
+                <div class="storage-bar"><div class="storage-fill fill-deut"></div></div>
+            </div>
+        </div>
+        <!-- 能量 -->
+        <div class="resource-card">
+            <div class="resource-icon energy"><i class="fas fa-bolt"></i></div>
+            <div class="resource-info">
+                <div class="resource-label">能量</div>
+                <div class="resource-value">5.6k</div>
+                <div class="resource-detail"><span>可用 4.9k</span><span>6.2k</span></div>
+                <div class="storage-bar"><div class="storage-fill fill-energy"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主区域: 左侧行星 + 右侧建筑 -->
+    <div class="main-panel">
+        <!-- 左侧星球列表 (经典样式) -->
+        <div class="planets-sidebar">
+            <div class="sidebar-title">
+                <i class="fas fa-meteor"></i> 殖民行星
+                <span style="flex:1; text-align:right; font-size:0.8rem;">3 / 8</span>
+            </div>
+            <div class="planet-list">
+                <!-- 母星 (激活状态) -->
+                <div class="planet-item active">
+                    <div class="planet-icon"><i class="fas fa-globe-americas"></i></div>
+                    <div class="planet-info">
+                        <h4>母星 <i class="fas fa-circle" style="color:#4ade80; font-size: 0.5rem;"></i></h4>
+                        <div class="planet-coords">[1:2:3]</div>
+                        <div class="planet-temp">21°C ~ 61°C <span class="moon-tag">🌑 月球</span></div>
+                    </div>
+                </div>
+                <!-- 殖民地 A -->
+                <div class="planet-item">
+                    <div class="planet-icon"><i class="fas fa-globe-europe"></i></div>
+                    <div class="planet-info">
+                        <h4>新世界 <span class="moon-tag">建设中</span></h4>
+                        <div class="planet-coords">[3:45:12]</div>
+                        <div class="planet-temp">-12°C ~ 8°C</div>
+                    </div>
+                </div>
+                <!-- 殖民地 B -->
+                <div class="planet-item">
+                    <div class="planet-icon"><i class="fas fa-globe-asia"></i></div>
+                    <div class="planet-info">
+                        <h4>边境 <i class="fas fa-moon" style="color:#aaa; font-size:0.7rem; margin-left:4px;"></i></h4>
+                        <div class="planet-coords">[5:91:4]</div>
+                        <div class="planet-temp">-70°C ~ -30°C</div>
+                    </div>
+                </div>
+            </div>
+            <!-- 额外小行星带占位 -->
+            <div style="margin-top: 16px; padding: 8px; background: #111b27; border-radius: 50px; text-align: center; color: #4d688b; font-size: 0.8rem;">
+                <i class="fa-regular fa-star"></i> 侦察信号: 1
+            </div>
+        </div>
+
+        <!-- 右侧内容 (建筑) -->
+        <div class="content-area">
+            <!-- 当前行星头 + 建造队列模拟 -->
+            <div class="content-header">
+                <div class="planet-name">
+                    <i class="fas fa-globe-americas"></i>
+                    <h2>母星 · 建筑</h2>
+                </div>
+                <div class="build-queue">
+                    <span class="queue-item"><i class="fas fa-hard-hat"></i> 建造队列:</span>
+                    <span class="queue-item">金属矿 <i class="fa-regular fa-clock"></i> 1.5h</span>
+                    <div class="progress-slim"><div class="bar" style="width:48%"></div></div>
+                </div>
+            </div>
+
+            <!-- 建筑网格 (经典OGame 资源/设施) -->
+            <div class="buildings-grid">
+                <!-- 金属矿 -->
+                <div class="building-card">
+                    <div class="building-icon"><i class="fas fa-hammer"></i></div>
+                    <div class="building-name">金属矿 <span class="building-level">Lv.27</span></div>
+                    <div class="building-stats">
+                        <div><span>产量</span> <span>6.9k/时</span></div>
+                        <div><span>能量</span> <span>-22</span></div>
+                    </div>
+                    <div class="upgrade-btn">升级 (27→28)</div>
+                </div>
+                <!-- 晶体矿 -->
+                <div class="building-card">
+                    <div class="building-icon"><i class="fas fa-gem"></i></div>
+                    <div class="building-name">晶体矿 <span class="building-level">Lv.24</span></div>
+                    <div class="building-stats">
+                        <div><span>产量</span> <span>4.1k/时</span></div>
+                        <div><span>能量</span> <span>-18</span></div>
+                    </div>
+                    <div class="upgrade-btn">升级 (24→25)</div>
+                </div>
+                <!-- 重氢合成器 -->
+                <div class="building-card">
+                    <div class="building-icon"><i class="fas fa-flask"></i></div>
+                    <div class="building-name">重氢厂 <span class="building-level">Lv.18</span></div>
+                    <div class="building-stats">
+                        <div><span>产量</span> <span>1.2k/时</span></div>
+                        <div><span>能量</span> <span>-31</span></div>
+                    </div>
+                    <div class="upgrade-btn">升级 (18→19)</div>
+                </div>
+                <!-- 太阳能电厂 -->
+                <div class="building-card">
+                    <div class="building-icon"><i class="fas fa-solar-panel"></i></div>
+                    <div class="building-name">太阳能 <span class="building-level">Lv.31</span></div>
+                    <div class="building-stats">
+                        <div><span>能量</span> <span>+2.7k</span></div>
+                        <div><span>产量</span> <span>--</span></div>
+                    </div>
+                    <div class="upgrade-btn">升级 (31→32)</div>
+                </div>
+                <!-- 机器人工厂 -->
+                <div class="building-card">
+                    <div class="building-icon"><i class="fas fa-robot"></i></div>
+                    <div class="building-name">机器人 <span class="building-level">Lv.14</span></div>
+                    <div class="building-stats">
+                        <div><span>建筑速度</span> <span>+140%</span></div>
+                    </div>
+                    <div class="upgrade-btn">升级 (14→15)</div>
+                </div>
+                <!-- 造船厂 -->
+                <div class="building-card">
+                    <div class="building-icon"><i class="fas fa-rocket"></i></div>
+                    <div class="building-name">造船厂 <span class="building-level">Lv.12</span></div>
+                    <div class="building-stats">
+                        <div><span>船坞容量</span> <span>6</span></div>
+                    </div>
+                    <div class="upgrade-btn">升级 (12→13)</div>
+                </div>
+                <!-- 研究实验室 (增加丰富度) -->
+                <div class="building-card">
+                    <div class="building-icon"><i class="fas fa-microscope"></i></div>
+                    <div class="building-name">实验室 <span class="building-level">Lv.16</span></div>
+                    <div class="building-stats">
+                        <div><span>研究点数</span> <span>2.8k/时</span></div>
+                    </div>
+                    <div class="upgrade-btn">升级 (16→17)</div>
+                </div>
+                <!-- 导弹发射井 (凑数) -->
+                <div class="building-card">
+                    <div class="building-icon"><i class="fas fa-bunker"></i></div>
+                    <div class="building-name">导弹井 <span class="building-level">Lv.5</span></div>
+                    <div class="building-stats">
+                        <div><span>导弹容量</span> <span>20</span></div>
+                    </div>
+                    <div class="upgrade-btn">升级 (5→6)</div>
+                </div>
+            </div>
+
+            <!-- 底部命令栏 (OGame 主要功能入口) -->
+            <div class="command-bar">
+                <div class="cmd-item"><i class="fas fa-chart-pie"></i> 概览</div>
+                <div class="cmd-item"><i class="fas fa-industry"></i> 资源</div>
+                <div class="cmd-item"><i class="fas fa-flask"></i> 研究</div>
+                <div class="cmd-item"><i class="fas fa-ship"></i> 船厂</div>
+                <div class="cmd-item"><i class="fas fa-shield-halved"></i> 防御</div>
+                <div class="cmd-item"><i class="fas fa-fleet"></i> 舰队</div>
+                <div class="cmd-item"><i class="fas fa-galaxy"></i> 银河系</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 脚注 (低调技术展示说明) -->
+    <div class="tech-footer">
+        <i class="fa-regular fa-eye"></i> 纯前端静态演示
+    </div>
+</div>
+<!-- 没有任何后端逻辑，只是一个承载记忆的UI草图 -->
+</body>
+</html>
